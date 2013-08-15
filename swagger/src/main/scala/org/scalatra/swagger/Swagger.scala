@@ -45,7 +45,9 @@ object Swagger {
   def collectModels[T: Manifest](alreadyKnown: Set[Model]): Set[Model] = collectModels(Reflector.scalaTypeOf[T], alreadyKnown)
   private[swagger] def collectModels(tpe: ScalaType, alreadyKnown: Set[Model], known: Set[ScalaType] = Set.empty): Set[Model] = {
     if (tpe.isMap) {
-      collectModels(tpe.typeArgs.head, alreadyKnown, tpe.typeArgs.toSet) ++ collectModels(tpe.typeArgs.last, alreadyKnown, tpe.typeArgs.toSet) + processMap(tpe)
+      val kvPair = Set(processMap(tpe, alreadyKnown)).flatten
+      val knownAndKv = alreadyKnown ++ kvPair
+      collectModels(tpe.typeArgs.head, alreadyKnown ++ knownAndKv, tpe.typeArgs.toSet) ++ collectModels(tpe.typeArgs.last, knownAndKv, tpe.typeArgs.toSet) ++ processMap(tpe, knownAndKv)
     }
     else if (tpe.isCollection || tpe.isOption) {
       val ntpe = tpe.typeArgs.head
@@ -78,12 +80,18 @@ object Swagger {
     }
   }
 
-  def processMap(tpe: ScalaType): Model = {
-      val theKey = tpe.typeArgs.head   //TODO: handle if this is a map
-      val theValue = tpe.typeArgs.last //TODO: handle if this is a map
+  def getKVClassName(theKey: String, theValue: String) =  theKey.capitalize + theValue.capitalize + "KVPair"
 
-    val name = theKey.simpleName + theValue.simpleName + "KVPair"
 
+  def processMap(tpe: ScalaType, alreadyKnown: Set[Model]): Option[Model] = {
+    val theKey = tpe.typeArgs.head
+    val theValue = tpe.typeArgs.last 
+
+    val name = getKVClassName(DataType.fromScalaType(theKey).name, DataType.fromScalaType(theValue).name.filterNot{c => (c == '[' || c == ']')})
+
+    if (alreadyKnown.map(_.id).contains(tpe.simpleName)) None
+
+    else {
     val keyField =
       ModelField(
         "key",
@@ -98,8 +106,8 @@ object Swagger {
       )
 
     val fields: List[ModelField] = List(keyField, valueField)
-    Model(name, name, fields.map(a => a.name -> a).toMap)
-
+    Some(Model(name, name, fields.map(a => a.name -> a).toMap))
+    }
   }
 
   def modelToSwagger[T](implicit mf: Manifest[T]): Option[Model] = modelToSwagger(Reflector.scalaTypeOf[T])
@@ -390,7 +398,7 @@ object DataType {
 
   object GenMap {
     def apply(): DataType = Map
-    def apply(k: DataType, v: DataType): DataType = new DataType("Map[%s, %s]" format(k.name, v.name))
+    def apply(k: DataType, v: DataType): DataType = new DataType("List[%s]" format(Swagger.getKVClassName(k.name, v.name))) //TODO: nested maps
   }
 
   def apply(name: String) = new DataType(name)

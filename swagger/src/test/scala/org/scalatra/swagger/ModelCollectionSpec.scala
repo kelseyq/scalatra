@@ -21,7 +21,14 @@ object ModelCollectionSpec {
   val thingsModels = taggedThingModels + Swagger.modelToSwagger[Things]
 
   case class MapThings(id: Long, taggedThings: Map[String, TaggedThing], visits: Map[String, Date], created: Date)
+  case class StringTaggedThingKVPair(key: String, value: TaggedThing)
+  case class StringDateKVPair(key: String, value: Date)
   val mapThingsModels = taggedThingModels + Swagger.modelToSwagger[MapThings]
+
+  case class NestedMaps(theMap: Map[String, Map[String, Int]])
+  case class StringIntKVPair(key:String, value: Int)
+
+  case class MultipleMaps(map1: Map[String, TaggedThing], map2: Map[String, TaggedThing])
 
   case class Thing(id: Long, thing: Option[TaggedThing])
   val thingModels = taggedThingModels + Swagger.modelToSwagger[Thing]
@@ -63,14 +70,27 @@ class ModelCollectionSpec extends Specification {
       collected must containAllOf(mapThingsModels.flatten.toSeq)
     }
 
-    "collect maps as lists of KeyValue pairs" in {
-      case class StringTaggedThingKVPair(key: String, val value: TaggedThing)
-      case class StringDateKVPair(key: String, val value: Date)
-
+    "collect maps in case classes as lists of key-value pairs" in {
       val collected = Swagger.collectModels[MapThings](Set.empty)
       collected must contain(Swagger.modelToSwagger[StringTaggedThingKVPair].get)
       collected must contain(Swagger.modelToSwagger[StringDateKVPair].get)
     }
+
+    "not duplicate key-value pairs in maps" in {
+      val collected = Swagger.collectModels[MultipleMaps](Set.empty)
+      collected must haveTheSameElementsAs(taggedThingModels.flatten + Swagger.modelToSwagger[StringTaggedThingKVPair].get
+            + Swagger.modelToSwagger[MultipleMaps].get)
+    }
+
+    "collect top level maps as key-value pairs" in {
+      val collected = Swagger.collectModels[Map[String, TaggedThing]](Set.empty)
+      collected must haveTheSameElementsAs(taggedThingModels.flatten + Swagger.modelToSwagger[StringTaggedThingKVPair].get )
+    }
+
+//    "collect nested maps as key-value pairs" in {
+//      val collected = Swagger.collectModels[NestedMaps](Set.empty)
+//      collected must haveTheSameElementsAs(Set(Swagger.modelToSwagger[StringIntKVPair]))
+//    }
 
     "collect models when provided as a list" in {
       val collected = Swagger.collectModels[List[Name]](Set.empty)

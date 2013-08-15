@@ -58,7 +58,7 @@ class DataTypeSpec extends Specification {
       DataType[java.lang.Boolean] must_== DataType.Boolean
     }
 
-    "return a correct Map datatype" in {
+    "return a Map as a List of KV datatypes" in {
       DataType[Map[String, String]] must_== DataType.GenMap(DataType.String, DataType.String)
     }
 
