@@ -57,10 +57,19 @@ class ModelCollectionSpec extends Specification {
       val collected = Swagger.collectModels[Things](Set.empty)
       collected.map(_.id) must haveTheSameElementsAs(thingsModels.flatten.map(_.id))
     }
+
     "collect models when hiding in a map" in {
       val collected = Swagger.collectModels[MapThings](Set.empty)
-      collected must haveTheSameElementsAs(mapThingsModels.flatten)
+      collected must containAllOf(mapThingsModels.flatten.toSeq)
+    }
 
+    "collect maps as lists of KeyValue pairs" in {
+      case class StringTaggedThingKVPair(key: String, val value: TaggedThing)
+      case class StringDateKVPair(key: String, val value: Date)
+
+      val collected = Swagger.collectModels[MapThings](Set.empty)
+      collected must contain(Swagger.modelToSwagger[StringTaggedThingKVPair].get)
+      collected must contain(Swagger.modelToSwagger[StringDateKVPair].get)
     }
 
     "collect models when provided as a list" in {
@@ -78,5 +87,6 @@ class ModelCollectionSpec extends Specification {
       val collected = Swagger.collectModels[Asset](Set.empty)
       collected.head must_== assetModel
     }
+
   }
 }

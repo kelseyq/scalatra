@@ -44,7 +44,9 @@ object Swagger {
 
   def collectModels[T: Manifest](alreadyKnown: Set[Model]): Set[Model] = collectModels(Reflector.scalaTypeOf[T], alreadyKnown)
   private[swagger] def collectModels(tpe: ScalaType, alreadyKnown: Set[Model], known: Set[ScalaType] = Set.empty): Set[Model] = {
-    if (tpe.isMap) collectModels(tpe.typeArgs.head, alreadyKnown, tpe.typeArgs.toSet) ++ collectModels(tpe.typeArgs.last, alreadyKnown, tpe.typeArgs.toSet)
+    if (tpe.isMap) {
+      collectModels(tpe.typeArgs.head, alreadyKnown, tpe.typeArgs.toSet) ++ collectModels(tpe.typeArgs.last, alreadyKnown, tpe.typeArgs.toSet) + processMap(tpe)
+    }
     else if (tpe.isCollection || tpe.isOption) {
       val ntpe = tpe.typeArgs.head
       if (! known.contains(ntpe)) collectModels(ntpe, alreadyKnown, known + ntpe)
@@ -74,6 +76,30 @@ object Swagger {
         }
       }
     }
+  }
+
+  def processMap(tpe: ScalaType): Model = {
+      val theKey = tpe.typeArgs.head   //TODO: handle if this is a map
+      val theValue = tpe.typeArgs.last //TODO: handle if this is a map
+
+    val name = theKey.simpleName + theValue.simpleName + "KVPair"
+
+    val keyField =
+      ModelField(
+        "key",
+        null,
+        DataType.fromScalaType(theKey)
+      )
+    val valueField =
+      ModelField(
+        "value",
+        null,
+        DataType.fromScalaType(theValue)
+      )
+
+    val fields: List[ModelField] = List(keyField, valueField)
+    Model(name, name, fields.map(a => a.name -> a).toMap)
+
   }
 
   def modelToSwagger[T](implicit mf: Manifest[T]): Option[Model] = modelToSwagger(Reflector.scalaTypeOf[T])
