@@ -27,6 +27,7 @@ object ModelCollectionSpec {
 
   case class NestedMaps(theMap: Map[String, Map[String, Int]])
   case class StringIntKVPair(key:String, value: Int)
+  case class StringListStringIntKVPairKVPair(key: String, value: List[StringIntKVPair])
 
   case class MultipleMaps(map1: Map[String, TaggedThing], map2: Map[String, TaggedThing])
 
@@ -87,10 +88,10 @@ class ModelCollectionSpec extends Specification {
       collected must haveTheSameElementsAs(taggedThingModels.flatten + Swagger.modelToSwagger[StringTaggedThingKVPair].get )
     }
 
-//    "collect nested maps as key-value pairs" in {
-//      val collected = Swagger.collectModels[NestedMaps](Set.empty)
-//      collected must haveTheSameElementsAs(Set(Swagger.modelToSwagger[StringIntKVPair]))
-//    }
+    "collect nested maps as key-value pairs" in {
+      val collected = Swagger.collectModels[NestedMaps](Set.empty)
+      collected must haveTheSameElementsAs(Set(Swagger.modelToSwagger[StringIntKVPair], Swagger.modelToSwagger[StringListStringIntKVPairKVPair], Swagger.modelToSwagger[NestedMaps]).flatten)
+    }
 
     "collect models when provided as a list" in {
       val collected = Swagger.collectModels[List[Name]](Set.empty)

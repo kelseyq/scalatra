@@ -80,14 +80,14 @@ object Swagger {
     }
   }
 
-  def getKVClassName(theKey: String, theValue: String) =  theKey.capitalize + theValue.capitalize + "KVPair"
+  def getKVClassName(theKey: String, theValue: String) =  theKey.capitalize + theValue.capitalize.filterNot{c => (c == '[' || c == ']')} + "KVPair"
 
 
   def processMap(tpe: ScalaType, alreadyKnown: Set[Model]): Option[Model] = {
     val theKey = tpe.typeArgs.head
-    val theValue = tpe.typeArgs.last 
+    val theValue = tpe.typeArgs.last
 
-    val name = getKVClassName(DataType.fromScalaType(theKey).name, DataType.fromScalaType(theValue).name.filterNot{c => (c == '[' || c == ']')})
+    val name = getKVClassName(DataType.fromScalaType(theKey).name, DataType.fromScalaType(theValue).name)
 
     if (alreadyKnown.map(_.id).contains(tpe.simpleName)) None
 
@@ -143,7 +143,7 @@ object Swagger {
             ModelField(
               f.getName,
               null,
-              DataType.fromScalaType(prop.returnType),
+              DataType.fromScalaType(ctorParam.map(_.argType) getOrElse prop.returnType),
               defaultValue = isOptional map { fn =>
                 val r = fn()
                 if (r == null) r.asInstanceOf[String] else r.toString
